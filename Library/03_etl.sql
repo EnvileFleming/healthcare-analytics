@@ -1,3 +1,5 @@
+-- SQL ETL Pipeline
+
 -- Load country dimension.
 INSERT INTO dim_country (country_name, country_code)
 SELECT DISTINCT entity, code
