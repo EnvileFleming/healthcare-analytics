@@ -1,5 +1,4 @@
--- Database Schema
-
+-- Database Schema (STAR)
 -- Staging table: mirrors the raw CSV column order.
 CREATE TABLE stg_covid_raw (
     entity TEXT,
@@ -9,7 +8,7 @@ CREATE TABLE stg_covid_raw (
     cumulative_cases BIGINT
 );
 
--- Country dimension
+-- Country dimension this describes WHO/WHERE
 CREATE TABLE dim_country (
     country_id SERIAL PRIMARY KEY,
     country_name VARCHAR(150) NOT NULL,
@@ -17,7 +16,7 @@ CREATE TABLE dim_country (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Date dimension.
+-- Date dimension. this describes WHEN
 CREATE TABLE dim_date (
     date_id SERIAL PRIMARY KEY,
     full_date DATE UNIQUE,
@@ -41,6 +40,21 @@ CREATE TABLE fact_covid (
     daily_deaths BIGINT,
     mortality_rate NUMERIC(8,4),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (country_id) REFERENCES dim_country(country_id),
-    FOREIGN KEY (date_id) REFERENCES dim_date(date_id)
+    CONSTRAINT fk_country FOREIGN KEY(country_id) REFERENCES dim_country(country_id),
+    CONSTRAINT fk_date FOREIGN KEY(date_id) REFERENCES dim_date(date_id)
 );
+
+-- Indexes for fact table
+-- Indexes are there to make data retrieval and JOIN operations faster, especially once fact_covid contains a large number of rows.
+
+CREATE INDEX idx_fact_country
+ON fact_covid(country_id);
+
+CREATE INDEX idx_fact_date
+ON fact_covid(date_id);
+
+CREATE INDEX idx_country_name
+ON dim_country(country_name);
+
+CREATE INDEX idx_date
+ON dim_date(full_date);
