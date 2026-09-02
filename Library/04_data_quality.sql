@@ -1,3 +1,5 @@
+-- 04_data_quality.sql
+
 -- 1. Duplicate country-date records.
 SELECT
     country_id,
