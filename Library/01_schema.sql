@@ -1,3 +1,5 @@
+-- Database Schema
+
 -- Staging table: mirrors the raw CSV column order.
 CREATE TABLE stg_covid_raw (
     entity TEXT,
