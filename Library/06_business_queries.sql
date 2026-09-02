@@ -247,7 +247,6 @@ JOIN dim_date d
 WHERE c.country_name = 'World'
 ORDER BY d.full_date;
 
-
 -- COUNTRY COMPARISON
 ---------------------------------------------------------------
 -- 13. Which countries have the highest total cases
@@ -281,7 +280,6 @@ WHERE row_num = 1
 ORDER BY total_cases DESC
 LIMIT 10;
 
-
 ---------------------------------------------------------------
 -- 14. Which countries have the highest total deaths
 --     in the latest available data?
@@ -313,7 +311,6 @@ FROM latest_country_data
 WHERE row_num = 1
 ORDER BY total_deaths DESC
 LIMIT 10;
-
 
 ---------------------------------------------------------------
 -- 15. Which countries have the largest number of
