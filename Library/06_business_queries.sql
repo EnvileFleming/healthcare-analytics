@@ -1,15 +1,10 @@
--- 06_business_queries.sql
 -- Business and public-health analysis built from the
 -- COVID-19 dimensional data warehouse.
 
 -- EXECUTIVE KPIs
----------------------------------------------------------------
--- 1. What are the latest global COVID statistics?
---
--- The dataset contains countries, regions, and global
--- aggregates. We use the "World" record directly instead
--- of summing all entities to avoid double-counting.
----------------------------------------------------------------
+-- What are the latest global COVID statistics?
+-- The dataset contains countries, regions, and global aggregates. We use the "World" record directly instead of summing all entities to avoid double-counting.
+
 SELECT
     d.full_date AS reporting_date,
     f.total_cases,
@@ -24,15 +19,10 @@ WHERE c.country_name = 'World'
 ORDER BY d.full_date DESC
 LIMIT 1;
 
----------------------------------------------------------------
--- 2. Which countries have the highest cumulative cases?
---
--- MAX() gets the highest cumulative value recorded for
--- each country across the full reporting period.
---
--- country_code IS NOT NULL helps exclude aggregate entities
--- such as World, continents, and income groups.
----------------------------------------------------------------
+-- Which countries have the highest cumulative cases?
+-- MAX() gets the highest cumulative value recorded for each country across the full reporting period.
+-- country_code IS NOT NULL helps exclude aggregate entities such as World, continents, and income groups.
+
 SELECT
     c.country_name,
     MAX(f.total_cases) AS total_cases
@@ -44,12 +34,9 @@ GROUP BY c.country_name
 ORDER BY total_cases DESC
 LIMIT 10;
 
----------------------------------------------------------------
--- 3. Which countries have the highest cumulative deaths?
---
--- The same country-level filtering is used so aggregate
--- entities do not appear in the ranking.
----------------------------------------------------------------
+-- Which countries have the highest cumulative deaths?
+-- The same country-level filtering is used so aggregate entities do not appear in the ranking.
+
 SELECT
     c.country_name,
     MAX(f.total_deaths) AS total_deaths
@@ -61,34 +48,26 @@ GROUP BY c.country_name
 ORDER BY total_deaths DESC
 LIMIT 10;
 
----------------------------------------------------------------
--- 4. What is the latest reporting date?
---
+-- What is the latest reporting date?
 -- This checks how recent the available warehouse data is.
----------------------------------------------------------------
+
 SELECT
     MAX(full_date) AS latest_reporting_date
 FROM dim_date;
 
----------------------------------------------------------------
--- 5. How many countries are monitored?
---
+-- How many countries are monitored?
 -- Only entities with a country code are counted to avoid
 -- including World and regional aggregate records.
----------------------------------------------------------------
+
 SELECT
     COUNT(*) AS countries_monitored
 FROM dim_country
 WHERE country_code IS NOT NULL;
 
 -- COUNTRY ANALYSIS
----------------------------------------------------------------
--- 6. Which countries recorded the highest single-day
---    increase in confirmed cases?
---
--- daily_cases was calculated during ETL by subtracting the
--- previous cumulative total using the LAG() function.
----------------------------------------------------------------
+-- Which countries recorded the highest single-day increase in confirmed cases?
+-- daily_cases was calculated during ETL by subtracting the previous cumulative total using the LAG() function.
+
 SELECT
     c.country_name,
     d.full_date,
@@ -102,13 +81,9 @@ WHERE c.country_code IS NOT NULL
 ORDER BY f.daily_cases DESC
 LIMIT 10;
 
----------------------------------------------------------------
--- 7. Which countries recorded the highest single-day
---    increase in deaths?
---
--- This identifies the largest daily increases in deaths
--- across all monitored countries and reporting dates.
----------------------------------------------------------------
+-- Which countries recorded the highest single-day increase in deaths?
+-- This identifies the largest daily increases in deaths across all monitored countries and reporting dates.
+
 SELECT
     c.country_name,
     d.full_date,
@@ -122,15 +97,10 @@ WHERE c.country_code IS NOT NULL
 ORDER BY f.daily_deaths DESC
 LIMIT 10;
 
----------------------------------------------------------------
--- 8. Which countries currently have the highest
---    mortality rates?
---
--- ROW_NUMBER() identifies the latest VALID record for each
--- country. This is better than taking MAX(mortality_rate),
--- because MAX() could return an unusually high value from
--- an earlier point in the pandemic.
----------------------------------------------------------------
+-- Which countries currently have the highest mortality rates?
+-- ROW_NUMBER() identifies the latest VALID record for each country. This is better than taking MAX(mortality_rate),
+-- because MAX() could return an unusually high value from an earlier point in the pandemic.
+
 WITH latest_country_metrics AS (
     SELECT
         c.country_name,
@@ -162,12 +132,9 @@ ORDER BY mortality_rate DESC
 LIMIT 10;
 
 -- GLOBAL TIME ANALYSIS
----------------------------------------------------------------
--- 9. How many new cases were reported globally each month?
---
--- Only the World entity is used because summing countries,
--- regions, and World together would double-count cases.
----------------------------------------------------------------
+-- How many new cases were reported globally each month?
+-- Only the World entity is used because summing countries, regions, and World together would double-count cases.
+
 SELECT
     d.year,
     d.month,
@@ -187,12 +154,9 @@ ORDER BY
     d.year,
     d.month;
 
----------------------------------------------------------------
--- 10. How many new deaths were reported globally each month?
---
--- Daily deaths are aggregated by year and month to show
--- how the global death trend changed over time.
----------------------------------------------------------------
+-- How many new deaths were reported globally each month?
+-- Daily deaths are aggregated by year and month to show how the global death trend changed over time.
+
 SELECT
     d.year,
     d.month,
@@ -212,13 +176,9 @@ ORDER BY
     d.year,
     d.month;
 
----------------------------------------------------------------
--- 11. How did global cumulative cases change over time?
---
--- Because the source already provides cumulative totals,
--- we can retrieve the World total directly for each date
--- rather than calculating another running total.
----------------------------------------------------------------
+-- How did global cumulative cases change over time?
+-- Because the source already provides cumulative totals, we can retrieve the World total directly for each date rather than calculating another running total.
+
 SELECT
     d.full_date,
     f.total_cases AS cumulative_cases
@@ -230,12 +190,9 @@ JOIN dim_date d
 WHERE c.country_name = 'World'
 ORDER BY d.full_date;
 
----------------------------------------------------------------
--- 12. How did global cumulative deaths change over time?
---
--- This provides a clean time series that can also be used
--- directly in Power BI for global trend visualization.
----------------------------------------------------------------
+--  How did global cumulative deaths change over time?
+-- This provides a clean time series that can also be used directly in Power BI for global trend visualization.
+
 SELECT
     d.full_date,
     f.total_deaths AS cumulative_deaths
@@ -248,13 +205,9 @@ WHERE c.country_name = 'World'
 ORDER BY d.full_date;
 
 -- COUNTRY COMPARISON
----------------------------------------------------------------
--- 13. Which countries have the highest total cases
---     in the latest available data?
---
--- ROW_NUMBER() keeps only the latest record per country so
--- every country appears once in the final comparison.
----------------------------------------------------------------
+-- Which countries have the highest total cases in the latest available data?
+-- ROW_NUMBER() keeps only the latest record per country so every country appears once in the final comparison.
+
 WITH latest_country_data AS (
     SELECT
         c.country_name,
@@ -280,13 +233,9 @@ WHERE row_num = 1
 ORDER BY total_cases DESC
 LIMIT 10;
 
----------------------------------------------------------------
--- 14. Which countries have the highest total deaths
---     in the latest available data?
---
--- This uses the same latest-record logic so the comparison
--- represents the most recent available country totals.
----------------------------------------------------------------
+-- Which countries have the highest total deaths in the latest available data?
+-- This uses the same latest-record logic so the comparison represents the most recent available country totals.
+
 WITH latest_country_data AS (
     SELECT
         c.country_name,
@@ -312,14 +261,9 @@ WHERE row_num = 1
 ORDER BY total_deaths DESC
 LIMIT 10;
 
----------------------------------------------------------------
--- 15. Which countries have the largest number of
---     cumulative cases per recorded death?
---
--- NULLIF prevents division-by-zero errors.
--- This query provides an additional comparison metric and
--- demonstrates safe ratio calculations in SQL.
----------------------------------------------------------------
+-- Which countries have the largest number of cumulative cases per recorded death?
+-- NULLIF prevents division-by-zero errors. // This query provides an additional comparison metric and demonstrates safe ratio calculations in SQL.
+
 WITH latest_country_data AS (
     SELECT
         c.country_name,
