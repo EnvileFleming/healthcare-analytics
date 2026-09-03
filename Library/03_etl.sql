@@ -86,40 +86,55 @@ SET daily_deaths = COALESCE(d.new_deaths,0)
 FROM daily_deaths d
 WHERE f.covid_id = d.covid_id;
 
--- Implemented data quality rules to flag invalid records and excluded them from mortality rate calculations // ONLY VALID records to be updated
--- add a new column to the fact_covid table to store data quality status
-ALTER TABLE fact_covid
-ADD COLUMN data_quality_status VARCHAR(30);
-
--- validate data quality and update the new column based on the rules
+-- Apply data quality rules to each fact record.
+-- IS DISTINCT FROM updates only rows where the status
+-- needs to be assigned or changed.
 UPDATE fact_covid
 SET data_quality_status =
-CASE
-    WHEN total_cases = 0 THEN 'NO_CASES'
-    WHEN total_cases < total_deaths THEN 'INVALID_SOURCE_DATA'
-    ELSE 'VALID'
-END;
+    CASE
+        WHEN total_cases IS NULL THEN 'INVALID_SOURCE_DATA'
+        WHEN total_cases = 0 THEN 'NO_CASES'
+        WHEN total_cases < total_deaths THEN 'INVALID_SOURCE_DATA'
+        ELSE 'VALID'
+    END
+WHERE data_quality_status IS DISTINCT FROM
+    CASE
+        WHEN total_cases IS NULL THEN 'INVALID_SOURCE_DATA'
+        WHEN total_cases = 0 THEN 'NO_CASES'
+        WHEN total_cases < total_deaths THEN 'INVALID_SOURCE_DATA'
+        ELSE 'VALID'
+    END;
 
--- update the mortality_rate column only for valid records
+-- Calculate mortality rate only for valid records.
+
 UPDATE fact_covid
 SET mortality_rate = ROUND(
-    (total_deaths::numeric / total_cases) * 100, 4)
+    (total_deaths::numeric / total_cases) * 100,
+    4
+)
 WHERE data_quality_status = 'VALID';
 
--- Count invalid mortality rate records
+-- Count records where mortality rate was not calculated
+-- because the source data failed validation.
+
 SELECT COUNT(*) AS invalid_mortality_rate_records
 FROM fact_covid
 WHERE mortality_rate IS NULL
-AND (total_cases IS NULL OR total_cases = 0 OR total_deaths > total_cases);
+  AND (
+        total_cases IS NULL
+        OR total_cases = 0
+        OR total_deaths > total_cases
+      );
 
--- Calculate mortality rate while excluding invalid source records.
-CREATE VIEW vw_valid_covid_metrics AS
+-- Create a reusable view containing only records
+-- with valid mortality calculations.
+
+CREATE OR REPLACE VIEW vw_valid_covid_metrics AS
 SELECT
     country_id,
     date_id,
     total_cases,
     total_deaths,
-    ROUND((total_deaths::numeric / total_cases) * 100, 4) AS mortality_rate
+    mortality_rate
 FROM fact_covid
-WHERE total_cases > 0
-  AND total_cases >= total_deaths;
+WHERE data_quality_status = 'VALID';
