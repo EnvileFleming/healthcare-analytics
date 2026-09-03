@@ -39,9 +39,14 @@ CREATE TABLE fact_covid (
     daily_cases BIGINT,
     daily_deaths BIGINT,
     mortality_rate NUMERIC(8,4),
+    data_quality_status VARCHAR(30),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_country FOREIGN KEY(country_id) REFERENCES dim_country(country_id),
-    CONSTRAINT fk_date FOREIGN KEY(date_id) REFERENCES dim_date(date_id)
+    CONSTRAINT fk_country
+        FOREIGN KEY (country_id)
+        REFERENCES dim_country(country_id),
+    CONSTRAINT fk_date
+        FOREIGN KEY (date_id)
+        REFERENCES dim_date(date_id)
 );
 
 -- Indexes for fact table
