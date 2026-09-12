@@ -10,28 +10,28 @@ CREATE TABLE stg_covid_raw (
 
 -- Country dimension this describes WHO/WHERE
 CREATE TABLE dim_country (
-    country_id SERIAL PRIMARY KEY,
-    country_name VARCHAR(150) NOT NULL,
+    country_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    country_name VARCHAR(150) NOT NULL UNIQUE,
     country_code VARCHAR(10),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Date dimension. this describes WHEN
 CREATE TABLE dim_date (
-    date_id SERIAL PRIMARY KEY,
-    full_date DATE UNIQUE,
-    year INTEGER,
-    quarter INTEGER,
-    month INTEGER,
-    month_name VARCHAR(20),
-    week INTEGER,
-    day INTEGER,
-    day_name VARCHAR(20)
+    date_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_date DATE NOT NULL UNIQUE,
+    year INTEGER NOT NULL,
+    quarter INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    month_name VARCHAR(20) NOT NULL,
+    week INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    day_name VARCHAR(20) NOT NULL
 );
 
 -- COVID-19 fact table.
 CREATE TABLE fact_covid (
-    covid_id BIGSERIAL PRIMARY KEY,
+    covid_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     country_id INTEGER NOT NULL,
     date_id INTEGER NOT NULL,
     total_cases BIGINT,
@@ -40,26 +40,31 @@ CREATE TABLE fact_covid (
     daily_deaths BIGINT,
     mortality_rate NUMERIC(8,4),
     data_quality_status VARCHAR(30),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_country
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_fact_country
         FOREIGN KEY (country_id)
         REFERENCES dim_country(country_id),
-    CONSTRAINT fk_date
+
+    CONSTRAINT fk_fact_date
         FOREIGN KEY (date_id)
-        REFERENCES dim_date(date_id)
+        REFERENCES dim_date(date_id),
+
+    CONSTRAINT uq_fact_country_date
+        UNIQUE (country_id, date_id),
+
+    CONSTRAINT chk_data_quality_status
+        CHECK (
+            data_quality_status IN
+            ('VALID', 'NO_CASES', 'INVALID_SOURCE_DATA')
+            OR data_quality_status IS NULL
+        )
 );
+-- Automatically indexed:
+-- dim_country(country_name)
+-- dim_date(full_date)
+-- fact_covid(country_id, date_id)
 
--- Indexes for fact table
--- Indexes are there to make data retrieval and JOIN operations faster, especially once fact_covid contains a large number of rows.
-
-CREATE INDEX idx_fact_country
-ON fact_covid(country_id);
-
-CREATE INDEX idx_fact_date
+-- Explicitly required:
+CREATE INDEX idx_fact_covid_date
 ON fact_covid(date_id);
-
-CREATE INDEX idx_country_name
-ON dim_country(country_name);
-
-CREATE INDEX idx_date
-ON dim_date(full_date);
