@@ -1,4 +1,4 @@
--- Reusable Reporting Views
+-- Reusable PostgreSQL reporting views
 
 -- Country Daily Metrics
 CREATE OR REPLACE VIEW vw_country_daily_metrics AS
@@ -15,53 +15,78 @@ SELECT
     f.daily_cases,
     f.daily_deaths,
     CASE
-        WHEN f.total_cases > 0
-             AND f.total_cases >= f.total_deaths
-        THEN ROUND((f.total_deaths::numeric / f.total_cases) * 100,4)
+        WHEN f.data_quality_status = 'VALID'
+            THEN f.mortality_rate
         ELSE NULL
-    END AS mortality_rate
-FROM fact_covid f
-JOIN dim_country c
-ON f.country_id = c.country_id
-JOIN dim_date d
-ON f.date_id = d.date_id;
+    END AS mortality_rate,
+    f.data_quality_status
+FROM fact_covid AS f
+JOIN dim_country AS c
+    ON c.country_id = f.country_id
+JOIN dim_date AS d
+    ON d.date_id = f.date_id;
 
 -- Global Daily Summary
+-- Uses the dedicated World record to avoid double-counting
+-- countries, regions, and other aggregate entities.
 CREATE OR REPLACE VIEW vw_global_daily_summary AS
 SELECT
     d.full_date,
     d.year,
     d.month,
-    SUM(f.daily_cases) AS global_daily_cases,
-    SUM(f.daily_deaths) AS global_daily_deaths,
-    SUM(f.total_cases) AS cumulative_cases,
-    SUM(f.total_deaths) AS cumulative_deaths
-FROM fact_covid f
-JOIN dim_date d
-ON f.date_id = d.date_id
-GROUP BY
-    d.full_date,
-    d.year,
-    d.month
-ORDER BY d.full_date;
+    f.daily_cases AS global_daily_cases,
+    f.daily_deaths AS global_daily_deaths,
+    f.total_cases AS cumulative_cases,
+    f.total_deaths AS cumulative_deaths
+FROM fact_covid AS f
+JOIN dim_country AS c
+    ON c.country_id = f.country_id
+JOIN dim_date AS d
+    ON d.date_id = f.date_id
+WHERE c.country_name = 'World';
 
 -- Country Summary
+-- Returns the latest cumulative totals and the highest
+-- daily values recorded for each standard country.
 CREATE OR REPLACE VIEW vw_country_summary AS
+WITH country_metrics AS (
+    SELECT
+        c.country_id,
+        c.country_name,
+        c.country_code,
+        d.full_date,
+        f.total_cases,
+        f.total_deaths,
+        ROW_NUMBER() OVER (
+            PARTITION BY c.country_id
+            ORDER BY d.full_date DESC, f.covid_id DESC
+        ) AS latest_row,
+        MAX(f.daily_cases) OVER (
+            PARTITION BY c.country_id
+        ) AS highest_daily_cases,
+        MAX(f.daily_deaths) OVER (
+            PARTITION BY c.country_id
+        ) AS highest_daily_deaths
+    FROM fact_covid AS f
+    JOIN dim_country AS c
+        ON c.country_id = f.country_id
+    JOIN dim_date AS d
+        ON d.date_id = f.date_id
+    WHERE LENGTH(c.country_code) = 3
+)
 SELECT
-    c.country_name,
-    c.country_code,
-    MAX(f.total_cases) AS total_cases,
-    MAX(f.total_deaths) AS total_deaths,
-    MAX(f.daily_cases) AS highest_daily_cases,
-    MAX(f.daily_deaths) AS highest_daily_deaths
-FROM fact_covid f
-JOIN dim_country c
-ON f.country_id = c.country_id
-GROUP BY
-    c.country_name,
-    c.country_code;
+    country_name,
+    country_code,
+    full_date AS latest_date,
+    total_cases,
+    total_deaths,
+    highest_daily_cases,
+    highest_daily_deaths
+FROM country_metrics
+WHERE latest_row = 1;
 
--- Monthly Summary
+-- Monthly Global Summary
+-- Uses World directly instead of summing all entities.
 CREATE OR REPLACE VIEW vw_monthly_summary AS
 SELECT
     d.year,
@@ -69,37 +94,58 @@ SELECT
     d.month_name,
     SUM(f.daily_cases) AS monthly_cases,
     SUM(f.daily_deaths) AS monthly_deaths
-FROM fact_covid f
-JOIN dim_date d
-ON f.date_id = d.date_id
+FROM fact_covid AS f
+JOIN dim_country AS c
+    ON c.country_id = f.country_id
+JOIN dim_date AS d
+    ON d.date_id = f.date_id
+WHERE c.country_name = 'World'
 GROUP BY
     d.year,
     d.month,
-    d.month_name
-ORDER BY
-    d.year,
-    d.month;
+    d.month_name;
 
--- Top Countries
+-- Latest Country Rankings
 CREATE OR REPLACE VIEW vw_country_rankings AS
+WITH latest_country_data AS (
+    SELECT
+        c.country_id,
+        c.country_name,
+        c.country_code,
+        d.full_date,
+        f.total_cases,
+        f.total_deaths,
+        ROW_NUMBER() OVER (
+            PARTITION BY c.country_id
+            ORDER BY d.full_date DESC, f.covid_id DESC
+        ) AS latest_row
+    FROM fact_covid AS f
+    JOIN dim_country AS c
+        ON c.country_id = f.country_id
+    JOIN dim_date AS d
+        ON d.date_id = f.date_id
+    WHERE LENGTH(c.country_code) = 3
+),
+latest_countries AS (
+    SELECT
+        country_name,
+        country_code,
+        full_date,
+        total_cases,
+        total_deaths
+    FROM latest_country_data
+    WHERE latest_row = 1
+)
 SELECT
-    c.country_name,
-    MAX(f.total_cases) AS total_cases,
-    MAX(f.total_deaths) AS total_deaths,
-    RANK() OVER(
-        ORDER BY MAX(f.total_cases) DESC
+    country_name,
+    country_code,
+    full_date AS latest_date,
+    total_cases,
+    total_deaths,
+    RANK() OVER (
+        ORDER BY total_cases DESC
     ) AS cases_rank,
-    RANK() OVER(
-        ORDER BY MAX(f.total_deaths) DESC
+    RANK() OVER (
+        ORDER BY total_deaths DESC
     ) AS deaths_rank
-FROM fact_covid f
-JOIN dim_country c
-ON f.country_id = c.country_id
-GROUP BY c.country_name;
-
--- VALIDATE THE CREATED VIEWS
-SELECT * FROM vw_country_daily_metrics LIMIT 10;
-SELECT * FROM vw_global_daily_summary LIMIT 10;
-SELECT * FROM vw_country_summary LIMIT 10;
-SELECT * FROM vw_monthly_summary LIMIT 10;
-SELECT * FROM vw_country_rankings LIMIT 10;
+FROM latest_countries;
