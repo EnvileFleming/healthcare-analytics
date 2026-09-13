@@ -5,6 +5,10 @@
 [![SQL](https://img.shields.io/badge/SQL-ETL%20%26%20Analytics-4479A1?logo=mysql&logoColor=white)](https://en.wikipedia.org/wiki/SQL)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+<p align="center">
+  <img src="assets/healthcare-analytics-banner.png" alt="Healthcare Analytics project banner" width="100%">
+</p>
+
 An end-to-end healthcare analytics project that transforms raw global COVID-19 time-series data into a validated PostgreSQL warehouse and Power BI-ready reporting views.
 
 The project covers staging, dimensional modeling, SQL ETL, data-quality validation, business analysis, advanced time-series analysis, and semantic-layer preparation.
