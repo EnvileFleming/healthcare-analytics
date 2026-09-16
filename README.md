@@ -102,6 +102,22 @@ erDiagram
 
 For global reporting, the analytical layer uses the dedicated World record to avoid double-counting countries, regions, and other aggregate entities.
 
+## Power BI dashboard
+
+The interactive report presents the validated PostgreSQL analytical layer through three focused pages:
+
+- **Executive Overview** — global KPIs, case trends, country distribution, top-country rankings, and a performance snapshot.
+- **Country Explorer** — country/date filtering, current KPIs, case and death trends, and daily detail.
+- **Data Quality** — validation-status counts, valid-record rate, and traceable record-level review.
+
+[Download the Power BI dashboard (.pbix)](powerbi/HealthcareAnalytics.pbix)
+
+<p align="center">
+  <img src="assets/healthcare-powerbi-dashboard.png" alt="Healthcare Analytics Power BI dashboard preview" width="100%">
+</p>
+
+<p align="center"><em>Dashboard design preview. Displayed values are illustrative; the PBIX refreshes from the PostgreSQL analytical views.</em></p>
+
 ## Repository structure
 
 ~~~text
@@ -109,6 +125,10 @@ healthcare-analytics/
 ├── README.md
 ├── TECHNICAL_NOTES.md
 ├── LICENSE
+├── assets/
+│   └── healthcare-powerbi-dashboard.png
+├── powerbi/
+│   └── HealthcareAnalytics.pbix
 ├── data/
 │   └── readme.md
 └── Library/
@@ -166,8 +186,8 @@ The raw CSV is not committed to the repository. See [data/readme.md](data/readme
 - [x] Business queries
 - [x] Advanced SQL analytics
 - [x] Power BI analytical views
-- [ ] Power BI PBIX file
-- [ ] Dashboard screenshots
+- [x] Power BI PBIX file
+- [x] Dashboard screenshot
 - [ ] Final visual findings and recommendations
 
 ## Technical documentation
