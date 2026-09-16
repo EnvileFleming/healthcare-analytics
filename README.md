@@ -118,11 +118,14 @@ The interactive report presents the validated PostgreSQL analytical layer throug
 
 <p align="center"><em>Dashboard design preview. Displayed values are illustrative; the PBIX refreshes from the PostgreSQL analytical views.</em></p>
 
+Document verified results in [Visual Findings and Recommendations](ANALYSIS_FINDINGS.md) after refreshing the PBIX.
+
 ## Repository structure
 
 ~~~text
 healthcare-analytics/
 ├── README.md
+├── ANALYSIS_FINDINGS.md
 ├── TECHNICAL_NOTES.md
 ├── LICENSE
 ├── assets/
