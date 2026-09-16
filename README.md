@@ -156,6 +156,20 @@ The raw CSV is not committed to the repository. See [data/readme.md](data/readme
 
 5. Connect Power BI to the analytical views when building the report.
 
+### Power BI map visuals are disabled
+
+The dashboard's country map uses Power BI's built-in **Map** visual. If Power BI displays **“Map and filled map visuals are disabled”**, enable the feature locally:
+
+1. Open **File > Options and settings > Options > Global > Security**.
+2. Enable **Use Map and Filled Map visuals**.
+3. Restart Power BI Desktop and reopen the report.
+
+If the message remains, the feature is disabled at the organization level. A Power BI tenant administrator must open **Power BI Service > Settings > Admin portal > Tenant settings**, enable **Map and filled map visuals** for the organization or an authorized security group, and apply the change. The Power BI Desktop setting cannot override a tenant restriction.
+
+If tenant access cannot be changed, replace the country map with a bar chart or treemap; the remaining report visuals and PostgreSQL model will continue to work normally.
+
+See [Microsoft's guidance for this Power BI message](https://learn.microsoft.com/en-us/questions/5981748/map-and-filled-map-visuals-are-disabled) for additional details.
+
 ## Project status
 
 - [x] PostgreSQL schema
